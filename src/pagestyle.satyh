@@ -29,7 +29,7 @@ type page-style-position =
   PageStyleTopLeft |
   PageStyleTopRight
 
-module JLReqPageStyle : sig
+module PageStyle : sig
   val register-page-style-inline : page-style -> inline-boxes
   val \register-page-style : [page-style] inline-cmd
   val register-page-style : page-style -> unit
@@ -146,17 +146,17 @@ end = struct
     let get-running-head format =
       match format with
       | PageStyleFirstMark(n) -> (fun pagenum pn pstr -> (
-        match JLReqMark.get-first-mark n pagenum with
+        match Mark.get-first-mark n pagenum with
         |None -> {}
         |Some(m) -> m
       ))
       | PageStyleBotMark(n) ->  (fun pagenum pn pstr -> (
-        match JLReqMark.get-last-mark n pagenum with
+        match Mark.get-last-mark n pagenum with
         |None -> {}
         |Some(m) -> m
       ))
       | PageStyleTopMark(n) ->  (fun pagenum pn pstr -> (
-        match JLReqMark.get-last-mark n (pagenum - 1) with
+        match Mark.get-last-mark n (pagenum - 1) with
         |None -> {}
         |Some(m) -> m
       ))

@@ -1,4 +1,4 @@
-module JLReqMark : sig
+module Mark : sig
   val set-mark : int -> inline-text -> inline-boxes
   val get-first-mark : int -> int -> inline-text option
   val get-last-mark : int -> int -> inline-text option
