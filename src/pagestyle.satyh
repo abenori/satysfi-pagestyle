@@ -3,7 +3,7 @@
 @require: fss/fss
 @require: fss/style
 @import: mark
-@import: pagenum
+@import: pagenumber
 
 type pagesstyle-page-info = (|page-number : int|)
 
