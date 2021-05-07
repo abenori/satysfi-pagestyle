@@ -1,0 +1,32 @@
+opam-version: "2.0"
+name: "satysfi-pagestyle"
+version: "1.0.0"
+synopsis: "A SATySFi package for patgestyle"
+description: """
+Brilliant description comes here.
+"""
+maintainer: "Noriyuki Abe <abenori@users.osdn.me>"
+authors: "Noriyuki Abe <abenori@users.osdn.me>"
+license: "BSD-2-Clause-FreeBSD"
+homepage: "https://github.com/abenori/satysfi-pagestyle"
+dev-repo: "git+https://github.com/abenori/satysfi-pagestyle.git"
+bug-reports: "https://github.com/abenori/satysfi-pagestyle/issues"
+depends: [
+  "satysfi" { >= "0.0.5" & < "0.0.6" }
+  "satyrographos" { >= "0.0.2.6" & < "0.0.3" }
+
+  # If your library depends on other libraries, please write down here
+  "satysfi-fss"
+]
+build: [
+  ["satyrographos" "opam" "build"
+   "--name" "pagestyle"
+   "--prefix" "%{prefix}%"
+   "--script" "%{build}%/Satyristes"]
+]
+install: [
+  ["satyrographos" "opam" "install"
+   "--name" "pagestyle"
+   "--prefix" "%{prefix}%"
+   "--script" "%{build}%/Satyristes"]
+]
