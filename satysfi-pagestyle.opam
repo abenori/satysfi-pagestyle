@@ -17,6 +17,7 @@ depends: [
 
   # If your library depends on other libraries, please write down here
   "satysfi-fss"
+  "satysfi-pagenumber"
 ]
 build: [
   ["satyrographos" "opam" "build"

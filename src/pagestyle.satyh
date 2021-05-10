@@ -2,8 +2,8 @@
 @require: option
 @require: fss/fss
 @require: fss/style
+@require: pagenumber/pagenumber
 @import: mark
-@import: pagenumber
 
 type pagesstyle-page-info = (|page-number : int|)
 
@@ -285,7 +285,7 @@ end = struct
 
   let odd-header ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-number-str pbinfo in
+    let pstr = PageNumber.get-page-string pbinfo in
     odd-header-native ctx pbinfo#page-number pn pstr
 
   let even-header-native =
@@ -294,7 +294,7 @@ end = struct
 
   let even-header ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-number-str pbinfo in
+    let pstr = PageNumber.get-page-string pbinfo in
     even-header-native ctx pbinfo#page-number pn pstr
 
   let odd-footer-native =
@@ -303,7 +303,7 @@ end = struct
 
   let odd-footer ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-number-str pbinfo in
+    let pstr = PageNumber.get-page-string pbinfo in
     odd-footer-native ctx pbinfo#page-number pn pstr
 
   let even-footer-native =
@@ -312,7 +312,7 @@ end = struct
 
   let even-footer ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-number-str pbinfo in
+    let pstr = PageNumber.get-page-string pbinfo in
     even-footer-native ctx pbinfo#page-number pn pstr
 
   let header-native istwoside =
@@ -326,7 +326,7 @@ end = struct
 
   let header istwoside ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-number-str pbinfo in
+    let pstr = PageNumber.get-page-string pbinfo in
     header-native istwoside ctx pbinfo#page-number pn pstr
 
   let footer-native istwoside =
@@ -340,7 +340,7 @@ end = struct
 
   let footer istwoside ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-number-str pbinfo in
+    let pstr = PageNumber.get-page-string pbinfo in
     footer-native istwoside ctx pbinfo#page-number pn pstr
 
 end

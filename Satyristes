@@ -29,10 +29,10 @@
   ;; Build commands
   (build
     ;; Run SATySFi
-    ((satysfi "manual.saty" "-o" "manual.pdf")))
+    ((satysfi "manual-ja.saty" "-o" "manual-ja.pdf")))
   ;; Files
   (sources
-    ((doc "manual.pdf" "doc/manual.pdf")))
+    ((doc "manual-ja.pdf" "doc/manual-ja.pdf")))
   ;; OPAM package file
   (opam "satysfi-pagestyle-doc.opam")
   ;; Dependency
