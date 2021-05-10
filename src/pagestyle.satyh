@@ -5,8 +5,6 @@
 @require: pagenumber/pagenumber
 @import: mark
 
-type pagesstyle-page-info = (|page-number : int|)
-
 % 本当のページ 見た目のページ 見た目のページ文字列 を受け付ける．
 type page-style = (|
   odd-header : context -> int -> int -> string -> block-boxes;
@@ -30,23 +28,32 @@ type page-style-position =
   PageStyleTopRight
 
 module PageStyle : sig
-  val register-page-style-inline : page-style -> inline-boxes
-  direct \register-page-style : [page-style] inline-cmd
-  val register-page-style : page-style -> unit
-  val odd-header : context -> pagesstyle-page-info -> block-boxes
+  val set-page-style-inline : page-style -> inline-boxes
+  val \set-page-style : [page-style] inline-cmd
+  val set-page-style : page-style -> unit
+  val odd-header : context -> 'a -> block-boxes
+    constraint 'a :: (|page-number : int|)
   val odd-header-native : context -> int -> int -> string -> block-boxes
-  val even-header : context -> pagesstyle-page-info -> block-boxes
+  val even-header : context -> 'a -> block-boxes
+    constraint 'a :: (|page-number : int|)
   val even-header-native : context -> int -> int -> string -> block-boxes
-  val odd-footer : context -> pagesstyle-page-info  -> block-boxes
+  val odd-footer : context -> 'a  -> block-boxes
+    constraint 'a :: (|page-number : int|)
   val odd-footer-native : context -> int -> int -> string -> block-boxes
-  val even-footer : context -> pagesstyle-page-info -> block-boxes
+  val even-footer : context -> 'a -> block-boxes
+    constraint 'a :: (|page-number : int|)
   val even-footer-native : context -> int -> int -> string -> block-boxes
-  val header : bool -> context -> pagesstyle-page-info -> block-boxes
+  val header : bool -> context -> 'a -> block-boxes
+    constraint 'a :: (|page-number : int|)
   val header-native : bool -> context -> int -> int -> string -> block-boxes
-  val footer : bool -> context -> pagesstyle-page-info -> block-boxes
+  val footer : bool -> context -> 'a -> block-boxes
+    constraint 'a :: (|page-number : int|)
   val footer-native : bool -> context -> int -> int -> string -> block-boxes
 
   val page-style-scheme : (|
+    header : context -> block-boxes -> block-boxes;
+    footer : context -> block-boxes -> block-boxes;
+  |) ?-> (|
     nombre : ((|
       position : page-style-position;
       nombre : (int -> string -> inline-text);
@@ -94,7 +101,6 @@ end = struct
       |_ -> false
     )
   
-  
   let get-text-list lst ctx pbinfo pagenum pagestr =
     let font-size = get-font-size ctx in
     let-rec out needs-skip lst ctx pbinfo pagenum pagestr =
@@ -124,6 +130,7 @@ end = struct
     let lstb = get-text-list (List.reverse lst) ctx pbinfo pagenum pagestr in
     List.fold-left (++) inline-nil (List.reverse lstb)
   
+  % ノンブルと柱を結合する．
   let concat-nombre-runhead ctx left right =
     let font-size = get-font-size ctx in
     let (left-len,_,_) = get-natural-metrics left in
@@ -133,12 +140,17 @@ end = struct
     else
       left ++ right
   
+  % left center rightをくっつけて一つのヘッダまたはフッタを作る
   let make-headfoot left center right =
     let (leftlen,_,_) = get-natural-metrics left in
     let (rightlen,_,_) = get-natural-metrics right in
     left ++ (inline-skip (0pt -' leftlen)) ++ inline-fil ++ center ++ inline-fil ++ (inline-skip (0pt -' rightlen)) ++ right
   
-  let page-style-scheme config =
+  let page-style-scheme ?:format-opt config =
+    let format = Option.from (|
+      header = (fun _ b -> b);
+      footer = (fun _ b -> b);
+    |) format-opt in
     let-rec get-each-sub pos lst func =
       match lst with
       | x :: xs -> 
@@ -192,71 +204,79 @@ end = struct
     let even-top-right = get-each PageStyleTopLeft get-even-running-head false in
     let even-top-center = get-each PageStyleTopCenter get-even-running-head false in
     
-    let odd-header ctx pbinfo pagenum pagestr =
-      line-break false false ctx (
-        make-headfoot (
-          concat-nombre-runhead ctx
-            (output-left odd-top-left#runhead ctx pbinfo pagenum pagestr)
-            (output-left odd-top-left#nombre ctx pbinfo pagenum pagestr)
-        ) (
-          concat-nombre-runhead ctx
-            (output-left odd-top-center#runhead ctx pbinfo pagenum pagestr)
-            (output-left odd-top-center#nombre ctx pbinfo pagenum pagestr)
-        ) (
-          concat-nombre-runhead ctx
-            (output-right odd-top-right#runhead ctx pbinfo pagenum pagestr)
-            (output-right odd-top-right#nombre ctx pbinfo pagenum pagestr)
+    let odd-header ctx pbinfo pagenum pagestr = 
+      format#header ctx (
+        line-break false false ctx (
+          make-headfoot (
+            concat-nombre-runhead ctx
+              (output-left odd-top-left#runhead ctx pbinfo pagenum pagestr)
+              (output-left odd-top-left#nombre ctx pbinfo pagenum pagestr)
+          ) (
+            concat-nombre-runhead ctx
+              (output-left odd-top-center#runhead ctx pbinfo pagenum pagestr)
+              (output-left odd-top-center#nombre ctx pbinfo pagenum pagestr)
+          ) (
+            concat-nombre-runhead ctx
+              (output-right odd-top-right#runhead ctx pbinfo pagenum pagestr)
+              (output-right odd-top-right#nombre ctx pbinfo pagenum pagestr)
+          )
         )
       )
     in
     let odd-footer ctx pbinfo pagenum pagestr =
-      line-break false false ctx (
-        make-headfoot (
-          concat-nombre-runhead ctx
-            (output-left odd-bottom-left#runhead ctx pbinfo pagenum pagestr)
-            (output-left odd-bottom-left#nombre ctx pbinfo pagenum pagestr)
-        ) (
-          concat-nombre-runhead ctx
-            (output-left odd-bottom-center#runhead ctx pbinfo pagenum pagestr)
-            (output-left odd-bottom-center#nombre ctx pbinfo pagenum pagestr)
-        ) (
-          concat-nombre-runhead ctx
-            (output-right odd-bottom-right#runhead ctx pbinfo pagenum pagestr)
-            (output-right odd-bottom-right#nombre ctx pbinfo pagenum pagestr)
+      format#footer ctx (
+        line-break false false ctx (
+          make-headfoot (
+            concat-nombre-runhead ctx
+              (output-left odd-bottom-left#runhead ctx pbinfo pagenum pagestr)
+              (output-left odd-bottom-left#nombre ctx pbinfo pagenum pagestr)
+          ) (
+            concat-nombre-runhead ctx
+              (output-left odd-bottom-center#runhead ctx pbinfo pagenum pagestr)
+              (output-left odd-bottom-center#nombre ctx pbinfo pagenum pagestr)
+          ) (
+            concat-nombre-runhead ctx
+              (output-right odd-bottom-right#runhead ctx pbinfo pagenum pagestr)
+              (output-right odd-bottom-right#nombre ctx pbinfo pagenum pagestr)
+          )
         )
       )
     in
     let even-header ctx pbinfo pagenum pagestr =
-      line-break false false ctx (
-        make-headfoot (
-          concat-nombre-runhead ctx
-            (output-left even-top-left#nombre ctx pbinfo pagenum pagestr)
-            (output-left even-top-left#runhead ctx pbinfo pagenum pagestr)
-        ) (
-          concat-nombre-runhead ctx
-            (output-left even-top-center#nombre ctx pbinfo pagenum pagestr)
-            (output-left even-top-center#runhead ctx pbinfo pagenum pagestr)
-        ) (
-          concat-nombre-runhead ctx
-            (output-right even-top-right#nombre ctx pbinfo pagenum pagestr)
-            (output-right even-top-right#runhead ctx pbinfo pagenum pagestr)
+      format#header ctx (
+        line-break false false ctx (
+          make-headfoot (
+            concat-nombre-runhead ctx
+              (output-left even-top-left#nombre ctx pbinfo pagenum pagestr)
+              (output-left even-top-left#runhead ctx pbinfo pagenum pagestr)
+          ) (
+            concat-nombre-runhead ctx
+              (output-left even-top-center#nombre ctx pbinfo pagenum pagestr)
+              (output-left even-top-center#runhead ctx pbinfo pagenum pagestr)
+          ) (
+            concat-nombre-runhead ctx
+              (output-right even-top-right#nombre ctx pbinfo pagenum pagestr)
+              (output-right even-top-right#runhead ctx pbinfo pagenum pagestr)
+          )
         )
       )
     in
     let even-footer ctx pbinfo pagenum pagestr =
-      line-break false false ctx (
-        make-headfoot (
-          concat-nombre-runhead ctx
-            (output-left even-bottom-left#nombre ctx pbinfo pagenum pagestr)
-            (output-left even-bottom-left#runhead ctx pbinfo pagenum pagestr)
-        ) (
-          concat-nombre-runhead ctx
-            (output-left even-bottom-center#nombre ctx pbinfo pagenum pagestr)
-            (output-left even-bottom-center#runhead ctx pbinfo pagenum pagestr)
-        ) (
-          concat-nombre-runhead ctx
-            (output-right even-bottom-right#nombre ctx pbinfo pagenum pagestr)
-            (output-right even-bottom-right#runhead ctx pbinfo pagenum pagestr)
+      format#footer ctx (
+        line-break false false ctx (
+          make-headfoot (
+            concat-nombre-runhead ctx
+              (output-left even-bottom-left#nombre ctx pbinfo pagenum pagestr)
+              (output-left even-bottom-left#runhead ctx pbinfo pagenum pagestr)
+          ) (
+            concat-nombre-runhead ctx
+              (output-left even-bottom-center#nombre ctx pbinfo pagenum pagestr)
+              (output-left even-bottom-center#runhead ctx pbinfo pagenum pagestr)
+          ) (
+            concat-nombre-runhead ctx
+              (output-right even-bottom-right#nombre ctx pbinfo pagenum pagestr)
+              (output-right even-bottom-right#runhead ctx pbinfo pagenum pagestr)
+          )
         )
       )
     in
@@ -275,17 +295,17 @@ end = struct
     |);];
     running-head = [];
   |)
-  let register-page-style ps = ref-page-style <- ps
-  let register-page-style-inline ps = hook-page-break (fun _ _ -> register-page-style ps)
-  let-inline ctx \register-page-style ps = register-page-style-inline ps
+  let set-page-style ps = ref-page-style <- ps
+  let set-page-style-inline ps = hook-page-break (fun _ _ -> set-page-style ps)
+  let-inline ctx \set-page-style ps = set-page-style-inline ps
   
   let odd-header-native =
     let ps = !ref-page-style in
     (fun ctx -> ps#odd-header ctx)
 
   let odd-header ctx pbinfo =
-    let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-string pbinfo in
+    let pn = PageNumber.get-page-number pbinfo#page-number in
+    let pstr = PageNumber.get-page-string pbinfo#page-number in
     odd-header-native ctx pbinfo#page-number pn pstr
 
   let even-header-native =
@@ -293,8 +313,8 @@ end = struct
     (fun ctx -> ps#even-header ctx)
 
   let even-header ctx pbinfo =
-    let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-string pbinfo in
+    let pn = PageNumber.get-page-number pbinfo#page-number in
+    let pstr = PageNumber.get-page-string pbinfo#page-number in
     even-header-native ctx pbinfo#page-number pn pstr
 
   let odd-footer-native =
@@ -302,8 +322,8 @@ end = struct
     (fun ctx -> ps#odd-footer ctx)
 
   let odd-footer ctx pbinfo =
-    let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-string pbinfo in
+    let pn = PageNumber.get-page-number pbinfo#page-number in
+    let pstr = PageNumber.get-page-string pbinfo#page-number in
     odd-footer-native ctx pbinfo#page-number pn pstr
 
   let even-footer-native =
@@ -311,36 +331,36 @@ end = struct
     (fun ctx -> ps#even-footer ctx)
 
   let even-footer ctx pbinfo =
-    let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-string pbinfo in
+    let pn = PageNumber.get-page-number pbinfo#page-number in
+    let pstr = PageNumber.get-page-string pbinfo#page-number in
     even-footer-native ctx pbinfo#page-number pn pstr
 
   let header-native istwoside =
     let ps = !ref-page-style in
-    if istwoside then (fun ctx -> ps#odd-header ctx)
-    else
+    if istwoside then 
       (fun ctx pagen pn pstr -> (
         if pn mod 2 == 0 then ps#even-header ctx pagen pn pstr
         else ps#odd-header ctx pagen pn pstr
       ))
+    else (fun ctx pagen pn pstr -> ps#odd-header ctx pagen pn pstr)
 
   let header istwoside ctx pbinfo =
-    let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-string pbinfo in
+    let pn = PageNumber.get-page-number pbinfo#page-number in
+    let pstr = PageNumber.get-page-string pbinfo#page-number in
     header-native istwoside ctx pbinfo#page-number pn pstr
 
   let footer-native istwoside =
     let ps = !ref-page-style in
-    if istwoside then (fun ctx -> ps#odd-footer ctx)
-    else
+    if istwoside then 
       (fun ctx pagen pn pstr -> (
         if pn mod 2 == 0 then ps#even-footer ctx pagen pn pstr
         else ps#odd-footer ctx pagen pn pstr
       ))
+    else (fun ctx pagen pn pstr -> ps#odd-footer ctx pagen pn pstr)
 
   let footer istwoside ctx pbinfo =
-    let pn = PageNumber.get-page-number pbinfo in
-    let pstr = PageNumber.get-page-string pbinfo in
+    let pn = PageNumber.get-page-number pbinfo#page-number in
+    let pstr = PageNumber.get-page-string pbinfo#page-number in
     footer-native istwoside ctx pbinfo#page-number pn pstr
 
 end

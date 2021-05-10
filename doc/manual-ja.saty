@@ -1,0 +1,244 @@
+@require: stdja
+@require: itemize
+
+
+document (|
+  title = {PageStyle};
+  author = {Noriyuki Abe};
+  show-toc = false;
+  show-title = false;
+|) '<
+  +p {
+    本パッケージは「ページスタイル」の機構を \SATySFi;に提供します．
+    「ページスタイル」とは，ヘッダやフッタを意味します．
+    クラスファイル作成者向けのパッケージです．
+    本パッケージは以下のパッケージに依存しています．
+  }
+  +listing{
+    * \code(`satysfi-fss`);：フォント管理を行うパッケージ．
+    * \code(`satysfi-pagenumber`);：ページ番号の管理を行うパッケージ．
+  }
+  +p{
+    クラスファイルに本パッケージを組み込むには次の手順を踏みます．
+  }
+  +enumerate{
+    * ヘッダなどに出力する見出し文字列などを「マーク」に登録する．通常\code(`+section`);などの見出し命令内で行う．
+    * ページスタイルを作成し，登録する．
+    * \code(`page-break`);の第三引数（など）に本パッケージからの出力を渡す．
+  }
+  +p{
+    順番に説明します．
+  }
+  
+  +section{マーク}<
+    +p{
+      例えば\code(`+section{はじめに}`);という見出しがある場合，ヘッダに「はじめに」と出力させたいことはよくあります．
+      マークはこのような機能を作るための支援を行います．
+      具体的には，\code(`+section{はじめに}`);において「マーク」に「はじめに」を登録しておき，ヘッダを出力する際にこれを参照するということができるようになります．
+    }
+    +p{
+      マークを使うために\code(`mark`);モジュールを読んでおきます．
+    }
+    +code(`@require: pagestyle/mark`);
+    +p{
+      マークの登録は\code(`Mark.set-mark`);を使います．
+    }
+    +code(```
+      let-block ctx +section ?:label title inner =
+        % 0番目のマークにtitleを設定する
+        % inline-nilと等価なinline-boxesがかえる
+        % 実際には「1節」のような文字列も同時に登録しておくことが多いだろう．
+        let mark-b = Mark.set-mark 0 title
+        ....
+        % きちんとMark.set-markの戻り値を埋め込んでおく．
+        mark-b ++ main-b
+    ```);
+    +p{
+      \code(`Mark.set-mark`);は次のように定義されています．
+    }
+    +code(```
+      set-mark: int -> inline-text -> inline-boxes
+    ```);
+    +p{
+      \code(`Mark.set-mark index txt`);の形で使い，\code(`index`);番目のマークに\code(`txt`);を登録します．戻り値は\code(`inline-nil`);と等価な\code(`inline-boxes`);です．
+      この戻り値を必ず本文に埋め込んでおきます．
+    }
+    +p{
+      ヘッダなどに出力する際には\code(`set-mark`);の第一引数に渡した整数値を使います．
+      別名をつけておくと便利でしょう．
+    }
+    +code(```
+      let section-index = 0
+    ```);
+    +p{
+      読み出すには次のような命令を使います．
+      ただしこれらの命令が機能するのは各ページのページ数が確定した後です．
+      なお，本パッケージのページスタイルの機能を使う場合はこの登録した値を読み出す必要はありません．
+    }
+    +code(```
+      % index番目の，pnページにおける最初のマークを取得する
+      let first-mark = Mark.get-first-mark index pn
+      % index番目の，pnページにおける最後のマークを取得する
+      let last-mark = Mark.get-last-mark index pn
+    ```);
+    +p{
+      これらで得られるマークは，\code(`pn`);ページ目で登録されたものとは限りません．
+      仮に\code(`pn`);ページ目ではマークが登録されていない場合には，それ以前に登録されたものが得られます．
+    }
+  >
+  
+  +section{ページスタイルの作成}<
+    +p{
+      ページスタイルは以下のように定義されています．
+    }
+    +code(```
+    type page-style = (|
+      odd-header : context -> int -> int -> string -> block-boxes;
+      even-header : context -> int -> int -> string -> block-boxes;
+      odd-footer : context -> int -> int -> string -> block-boxes;
+      even-footer : context -> int -> int -> string -> block-boxes;
+    |)
+    ```);
+    +p{
+      各関数の第二引数は真のページ数（文書の最初から一ずつ増えていくもの），第三引数はみかけのページ数，第四引数はみかけのページ数を文字列で表したものです．（これらのページ数の違いについては\code(`PageNumber`);パッケージの説明書をご覧ください．）
+      これを直接設定してもよいのですが，次の\code(`page-style-scheme`);を使っても作成することができます．
+      まずはページスタイルの機能を使うために\code(`PageStyle`);モジュールを読み込んでおきます．
+    }
+    +code(```
+      @require: pagestyle/pagestyle
+    ```);
+    +p{
+      次のようにしてページスタイルを作成することができます．
+    }
+    +code(```
+    let my-page-style = PageStyle.page-style-scheme (|
+      nombre = [% ノンブルの指定
+        (|
+          % 場所はフッタの真ん中
+          position = PageStyleBottomCenter; 
+          % ノンブルの出力．ページ数をそのまま出力する．
+          nombre = (fun pbinfo ps -> embed-string (ps)); 
+          % フォント指定．satysfi-fssでの指定をする．
+          font = [with-font-size (fun l -> l *' 0.8)]; 
+        |);
+      ];
+      running-head = [% 柱の指定
+        (|
+          % 柱の場所はヘッダの中心
+          position = PageStyleTopCenter
+          % 奇数ページには+subsectionの見出しを出力
+          odd = PageStyleFirstMark(subsection-index); 
+          % 偶数ページには+section見出しを出力
+          even = PageStyleBotMark(section-index); 
+          font = [with-font-size (fun l -> l *' 0.8)];
+        |)
+      ];
+    |)
+    ```);
+  +p{
+    ただし\code(`section-index`);や\code(`subsection-index`);には適切な整数値が束縛されていて，\code(`+section`);や\code(`+subsection`);において対応するマークが設定されているとします．
+  }
+  +p{
+    \code(`position`);には\code(`PageStyleBottomCenter`);，\code(`PageStyleBottomLeft`);，\code(`PageStyleBottomRight`);，\code(`PageStyleTopCenter`);，\code(`PageStyleTopLeft`);，\code(`PageStyleTopRight`);の六つを設定できます．
+  }
+  +p{
+    \code(`running-head`);における\code(`odd`);や\code(`even`);には以下のどれかを指定します．
+    \listing{
+      * \code(`PageStyleFirstMark(n)`); \code(`n`);番目のそのページ最初のマークを出力します．
+      * \code(`PageStyleBotMark(n)`); \code(`n`);番目のそのページ最後のマークを出力します．
+      * \code(`PageStyleTopMark(n)`); \code(`n`);番目のそのページ頭でのマークを出力します．
+      * \code(`PageStyleFormat(f)`); \code(`f`);で定まるヘッダやフッタを直接指定します．\code(`f`);は型\code(`int -> string -> inline-text`);を持ち，\code(`f pn pstr`);，ただし\code(`pn`);は現在の見た目のページ数，\code(`pstr`);は見た目のページ数を文字列にしたものとして呼び出されます．
+    }
+  }
+  +p{
+    さらに，第一引数にオプションで次の引数を与えることができます．
+  }
+  +code(```
+    (|
+      header : context -> block-boxes -> block-boxes;
+      footer : context -> block-boxes -> block-boxes;
+    |)
+  ```);
+  +p{
+    ヘッダおよびフッタは出力直前にこの関数に代入され，その結果を最終的に出力します．
+    例えばヘッダに下線を引くには次のようにします．
+  }
+  +code(```
+    let underline ctx b =
+      let pads = (0pt, 0pt, 0pt, 2pt) in
+      let deco = (fun (x,y) w h d -> [
+        stroke 0.5pt Color.black (Gr.line (x,y -' d) (x +' w,y -' d));
+      ]) in
+      let decos = (deco,deco,deco,deco) in
+      block-frame-breakable ctx pads decos (fun c -> b)
+    let my-page-style = PageStyle.page-style-scheme ?:(|
+        header = underline;
+        footer = (fun _ b -> b);
+      |)% 第二引数は上で説明したもの
+  ```);
+  +p{
+    ページスタイルの登録は\code(`PageStyle.set-page-style: page-style -> unit`);で行います．
+  }
+  +code(```
+    set-page-style my-page-style
+  ```);
+  +p{
+    本文中で変更するには\code(`set-page-style-inline`);を使います．
+  }
+  +code(```
+    let ps-b = set-page-style-inline my-page-style in
+    ...
+    % 戻り値はinline-boxes，本文に埋め込む．
+    main-b ++ ps-b
+  ```);
+  +p{
+    これのユーザ用関数である\code(`\set-page-style`);もあります．
+    文書内で以下のように呼び出すことでページスタイルが変更されます．
+  }
+  +code(``
+    +p{
+      ...
+      % 現在のページスタイルがこれ以降変更される．
+      \PageStyle.set-page-style(new-ps);
+      ...
+    }
+     
+  ``);
+  >
+  
+  +section{ページスタイルの出力}<
+    +p{
+      \code(`PageStyle.header`);と\code(`PageStyle.footer`);を使うと，現在登録されているページスタイルに従った出力を得ることができます．
+      主にクラスファイル内で定義された\code(`document`);関数内で呼び出されることになるかと思います．
+      次の使用例を見ればその使い方がわかるでしょう．
+    }
+    +code(``
+      ...
+      let pagestyle pbinfo =
+        let ctx = ... in % contextを取得
+        let (xh,yh) = ... in % headerの位置を取得
+        let (xf,yf) = ... in % footerの位置を取得
+        (|
+          % 引数の`true'はヘッダとフッタがページ数の
+          % 偶奇に応じて変わることを意味する．
+          % falseにすると常にoddと見なされる．
+          header-content = PageStyle.header true pbinfo;
+          header-origin = (xh,yh);
+          footer-content = PageStyle.footer true pbinfo;
+          footer-origin = (xf,yf);
+        |)
+      in
+      ...
+      let paper-size = ... in % 紙サイズを設定
+      let page-layout pbinfo = ... in % 本文位置を設定
+      let main-b = ... in % 本文を取得
+      page-break
+        paper-size
+        page-layout
+        pagestyle % ここに上のページスタイルを与える
+        main-b
+    ``);
+  >
+  
+
+>
