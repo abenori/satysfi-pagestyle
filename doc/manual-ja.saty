@@ -192,7 +192,7 @@ document (|
     main-b ++ ps-b
   ```);
   +p{
-    これのユーザ用関数である\code(`\set-page-style`);もあります．
+    これのユーザ用コマンドである\code(`\set-page-style`);もあります．
     文書内で以下のように呼び出すことでページスタイルが変更されます．
   }
   +code(``
@@ -200,6 +200,20 @@ document (|
       ...
       % 現在のページスタイルがこれ以降変更される．
       \PageStyle.set-page-style(new-ps);
+      ...
+    }
+     
+  ``);
+  +p{
+    \code(`set-this-page-style-inline`);を使うと，現在のページのページスタイルを一時的に変更できます．
+    次のページに行くと元に戻ります．
+    ユーザ用コマンドは\code(`\set-this-page-style`);です．
+  }
+  +code(``
+    +p{
+      ...
+      % このページのページスタイルだけ変更される．
+      \PageStyle.set-this-page-style(new-ps);
       ...
     }
      

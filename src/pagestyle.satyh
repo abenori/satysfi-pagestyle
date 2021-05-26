@@ -1,5 +1,6 @@
 @require: list
 @require: option
+@require: base/list-ext
 @require: fss/fss
 @require: fss/style
 @require: pagenumber/pagenumber
@@ -29,7 +30,9 @@ type page-style-position =
 
 module PageStyle : sig
   val set-page-style-inline : page-style -> inline-boxes
+  val set-this-page-style-inline : page-style -> inline-boxes
   val \set-page-style : [page-style] inline-cmd
+  val \set-this-page-style : [page-style] inline-cmd
   val set-page-style : page-style -> unit
   val odd-header : context -> 'a -> block-boxes
     constraint 'a :: (|page-number : int|)
@@ -295,68 +298,76 @@ end = struct
     |);];
     running-head = [];
   |)
+  let-mutable ref-this-page-style <- []
   let set-page-style ps = ref-page-style <- ps
   let set-page-style-inline ps = hook-page-break (fun _ _ -> set-page-style ps)
   let-inline ctx \set-page-style ps = set-page-style-inline ps
+  let set-this-page-style-inline ps = hook-page-break (
+    fun pbinfo_ -> (
+      ref-this-page-style <- (pbinfo#page-number,ps) :: !ref-this-page-style
+    )
+  )
+  let-inline ctx \set-this-page-style ps = set-this-page-style-inline ps
   
-  let odd-header-native =
-    let ps = !ref-page-style in
-    (fun ctx -> ps#odd-header ctx)
+  let get-page-style pn = 
+    match List.find (fun (p,_) -> (if p == pn then true else false)) !ref-this-page-style with
+    | Some(_,ps) -> ps
+    | None -> !ref-page-style
+  
+  let odd-header-native ctx p =
+    let ps = get-page-style p in
+    ps#odd-header ctx p
 
   let odd-header ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo#page-number in
     let pstr = PageNumber.get-page-string pbinfo#page-number in
     odd-header-native ctx pbinfo#page-number pn pstr
 
-  let even-header-native =
-    let ps = !ref-page-style in
-    (fun ctx -> ps#even-header ctx)
+  let even-header-native ctx p =
+    let ps = get-page-style p in
+    ps#even-header ctx p
 
   let even-header ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo#page-number in
     let pstr = PageNumber.get-page-string pbinfo#page-number in
     even-header-native ctx pbinfo#page-number pn pstr
 
-  let odd-footer-native =
-    let ps = !ref-page-style in
-    (fun ctx -> ps#odd-footer ctx)
+  let odd-footer-native ctx p =
+    let ps = get-page-style p in
+    ps#odd-footer ctx p
 
   let odd-footer ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo#page-number in
     let pstr = PageNumber.get-page-string pbinfo#page-number in
     odd-footer-native ctx pbinfo#page-number pn pstr
 
-  let even-footer-native =
-    let ps = !ref-page-style in
-    (fun ctx -> ps#even-footer ctx)
+  let even-footer-native ctx p =
+    let ps = get-page-style p in
+    ps#even-footer ctx p
 
   let even-footer ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo#page-number in
     let pstr = PageNumber.get-page-string pbinfo#page-number in
     even-footer-native ctx pbinfo#page-number pn pstr
 
-  let header-native istwoside =
-    let ps = !ref-page-style in
+  let header-native istwoside ctx pagen pn pstr =
+    let ps = get-page-style pagen in
     if istwoside then 
-      (fun ctx pagen pn pstr -> (
-        if pn mod 2 == 0 then ps#even-header ctx pagen pn pstr
-        else ps#odd-header ctx pagen pn pstr
-      ))
-    else (fun ctx pagen pn pstr -> ps#odd-header ctx pagen pn pstr)
+      if pn mod 2 == 0 then ps#even-header ctx pagen pn pstr
+      else ps#odd-header ctx pagen pn pstr
+    else ps#odd-header ctx pagen pn pstr
 
   let header istwoside ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo#page-number in
     let pstr = PageNumber.get-page-string pbinfo#page-number in
     header-native istwoside ctx pbinfo#page-number pn pstr
 
-  let footer-native istwoside =
-    let ps = !ref-page-style in
+  let footer-native istwoside ctx pagen pn pstr =
+    let ps = get-page-style pagen in
     if istwoside then 
-      (fun ctx pagen pn pstr -> (
-        if pn mod 2 == 0 then ps#even-footer ctx pagen pn pstr
-        else ps#odd-footer ctx pagen pn pstr
-      ))
-    else (fun ctx pagen pn pstr -> ps#odd-footer ctx pagen pn pstr)
+      if pn mod 2 == 0 then ps#even-footer ctx pagen pn pstr
+      else ps#odd-footer ctx pagen pn pstr
+    else ps#odd-footer ctx pagen pn pstr
 
   let footer istwoside ctx pbinfo =
     let pn = PageNumber.get-page-number pbinfo#page-number in
