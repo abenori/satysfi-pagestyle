@@ -14,10 +14,11 @@ bug-reports: "https://github.com/abenori/satysfi-pagestyle/issues"
 depends: [
   "satysfi" { >= "0.0.5" }
   "satyrographos" { >= "0.0.2.6" & < "0.0.3" }
+  "satysfi-dist"
 
   # If your library depends on other libraries, please write down here
-  "satysfi-base"
-  "satysfi-fss"
+  "satysfi-base" { >= "1.4.0" & < "2.0.0" }
+  "satysfi-fss" { >= "0.2.0" & < "0.3.0" }
   "satysfi-pagenumber"
 ]
 build: [

@@ -15,9 +15,74 @@ let-inline \show-float f =
 in
 
 document (|
-  title = {pagestyle Manual};
-  author = {Your Name};
+  title = {PageStyle};
+  author = {Noriyuki Abe};
 |) '<
   +p {
+    This package gives a page-style mechanism to \SATySFi;.
+    Here page-style means the style for outputting header and footers.
   }
+  
+  +p {
+    A basic usage is the following.
+    In the document function in a document class, we call the functions in the package as follows.
+  }
+  +code(``
+    ...
+    let pagestyle pbinfo =
+      let ctx = ... in % get a context
+      let (xh,yh) = ... in % get a position of the header
+      let (xf,yf) = ... in % get a position of the footer
+      (|
+        % The argumen `true' means that the header depends on 
+        % a parity of the current page number.
+        header-content = PageStyle.header true;
+        header-origin = (xh,yh);
+        footer-content = PageStyle.footer true;
+        footer-origin = (xf,yf);
+      |)
+    in
+    ...
+    let paper-size = ... in % set a papersize
+    let page-layout pbinfo = ... in % set a position of main texts
+    let main-b = ... in % set a main block
+    page-break
+      paper-size
+      page-layout
+      pagestyle % set page-style here
+      main-b
+  ``);
+  
+  +p{
+    We need to set a pagestyle in the preamble or in a class file as follows.
+  }
+  
+  +code(``
+  % construct a pagestyle ‘plain’
+  let plain = PageStyle.pagestyle-scheme (|
+    nombre = [(|
+      position = PageStyleBottomCenter;
+      nombre = (fun _ pagestr -> embed-string (pagestr));
+      font = [with-font-size (fun l -> l *' 0.8)];
+    |);];
+    running-head = [];
+  |)
+  % 
+  let () = PageStyle.register-page-style plain
+  ``);
+  
+  +p{
+    One can change the current pagesytle using \code(`\register-page-style`);.
+  }
+  +code(``
+    +p{
+      ...
+      %the current pagestyle is changed from this page
+      \register-page-style(new-ps);
+      ...
+    }
+     
+  ``);
+  
+  
 >

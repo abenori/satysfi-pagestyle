@@ -16,6 +16,8 @@
   (dependencies
     ((dist ()) ; Standard library
      (base ()) ; Base library
+     (fss ())
+     (pagenumber ())
     )))
 
 ;; Library doc declaration
@@ -39,5 +41,4 @@
   (dependencies
     ((pagestyle ()) ; the main library
      (dist ()) ; Standard library
-     (base ()) ; Base library
     )))
